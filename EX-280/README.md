@@ -56,20 +56,17 @@ Common Commands
 
 `oc get storageclass`
 
-Create an app with Postgres DB
-
+Create an app with Postgres DB\
 `oc new-app --name postgresql-persistent --image registry.redhat.io/rhel8/postgresql-13:1-7 -e POSTGRESQL_USER=redhat -e POSTGRESQL_PASSWORD=redhat123 -e POSTGRESQL_DATABASE=persistentdb`
 
-Create PV and PVC
-
+Create PV and PVC\
 `oc set volumes deployment/postgresql-persistent --add --name postgresql-storage --type pvc --claim-class nfs-storage --claim-mode rwo --claim-size 10Gi --mount-path /var/lib/pgsql --claim-name postgresql-storage`
 
 `oc get pvc`
 
 `oc get pv`
 
-Sample SQL to be used to initialize the postgresl sql 
-
+Sample SQL to be used to initialize the postgresl sql
 ```
 cat init_data.sql << EOF
 CREATE TABLE characters ( id SERIAL PRIMARY KEY, name varchar(50), nationality varchar(50)); 
@@ -77,28 +74,26 @@ INSERT INTO characters (name, nationality) VALUES (‘James’, ‘USA’) , (�
 EOF
 ```
 
-Initialize DB with some sample Data
+Initialize DB with some sample Data\
 `oc exec deploy/postgresql-persistent  -I redhat123 — /usr/bin/psql -U redhat persistentdb < init_data.sql`
 
-Verify data exists in the DB
+Verify data exists in the DB\
 `oc rsh deploy/postgresql-persistent  /usr/bin/psql -U redhat persistentdb -c 'select * from characters' `
 
-Delete the Pods
+Delete the Pods\
 `oc delete all -l app=postgresql-persistent`
 
-Create new DB app
+Create new DB app\
 `oc new-app --name postgresql-persistent2 --image registry.redhat.io/rhel8/postgresql-13:1-7 -e POSTGRESQL_USER=redhat -e POSTGRESQL_PASSWORD=redhat123 -e POSTGRESQL_DATABASE=persistentdb`
 
-Attach the old volume to the New DB App
+Attach the old volume to the New DB App\
 `oc set volumes deployment/postgresql-persistent2 --add --name postgresql-storage --type pvc --claim-name postgresql-storage --mount-path /var/lib/pgsql`
 
-Verify that OLD data exists in the New DB
+Verify that OLD data exists in the New DB\
 `oc rsh deploy/postgresql-persistent2  /usr/bin/psql -U redhat persistentdb -c 'select * from characters' `
 
-Clean-up 
-
-`oc delete all -l app=postgresql-persistent2`
-
+Clean-up\
+`oc delete all -l app=postgresql-persistent2`\
 `oc delete pvc/postgresql-storage`
 
 
@@ -107,6 +102,7 @@ Clean-up
 ## OpenShift Authentication & Authorization, htpasswd
 
 
+htpasswd -cBb htpasswd-file user password
 
 htpasswd -cBb htpasswd-file admin redhat
 htpasswd -Bb htpasswd-file developer developer
@@ -115,7 +111,11 @@ oc create secret generic localusers --from-file htpasswd=htpasswd-file -n opensh
 
 oc adm policy add-cluster-role-to-user cluster-admin admin
 
-oc get oauth cluster -o yaml gt oauth1.yaml
+oc get oauth cluster -o yaml >  oauth1.yaml
+
+Add the following to enable htpasswd as the IdentityProvider --OR-- use the OpenShift Console and Navigate to Administration --> Cluster Settings --> Configuration --> Search for 'OAuth' and add 'HTpasswd' as the IDp
+
+```
 spec:
   identityProviders:
   - htpasswd:
@@ -124,17 +124,21 @@ spec:
     mappingMethod: claim
     name: myusers
     type: HTPasswd
+```
 
-oc replace -f oauth.yaml
+oc replace -f oauth1.yaml
+
+Wait till the pods are restarted\
 oc get pods -n openshift-authentication
 
-oc login -u admin -p redhat
-oc get nodes
-oc get users
-oc get identity
+Login with the new users\
+oc login -u admin -p redhat\
+oc login -u developer -p developer\
 
-oc login -u developer -p developer
-oc get nodes
+For every logged in user, an entry will be added\
+oc get users\
+oc get identity\
+
 
 
 How to extract users from secret file and add/update users?
