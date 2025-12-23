@@ -23,61 +23,78 @@ curl -vv -I --cacert certs/training-CA.pem https://todo-https.apps.ocp4.example.
 curl -I http://{POD_SVC_CLUSTER_IP}
 
 Finally, access the application over HTTPS. Use the -k option, because the container does not have access to the CA certificate.
-sh-4.4$ curl -s -k https://{POD_SVC_CLUSTER_IP}:8443 | head -n5
+curl -s -k https://{POD_SVC_CLUSTER_IP}:8443 | head -n5
 
 
 
-Chapter 2:
-commands--
-oc get clusterversion
+## OpenShift Cluster Operators, Troubleshooting, Pod
 
-## OpenShift Container Platform cluster operators are top level operators that manage the cluster. They are responsible for the main components, such as the API server, the web console, storage etc.
+`oc get clusterversion`
 
-oc get clusteroperators
-oc get nodes
-oc adm top node
-oc describe node master01
-oc get pod -n openshift-image-registry
+OpenShift Container Platform cluster operators are top level operators that manage the cluster. They are responsible for the main components, such as the API server, the web console, storage etc.
 
-oc status
-oc get events
+`oc get clusteroperators`
 
+`oc get nodes`
 
-OpenShift Storage, Persistent Volume Claim (PVC), PV (OpenShift Administration Part-3) Red Hat Ex280
-commands--
-oc get storageclass
+`oc adm top node`
 
-oc new-app --name postgresql-persistent --image registry.redhat.io/rhel8/postgresql-13:1-7 -e POSTGRESQL_USER=redhat -e POSTGRESQL_PASSWORD=redhat123 -e POSTGRESQL_DATABASE=persistentdb
+`oc describe node master01`
 
-oc set volumes deployment/postgresql-persistent --add --name postgresql-storage --type pvc --claim-class nfs-storage --claim-mode rwo --claim-size 10Gi --mount-path /var/lib/pgsql --claim-name postgresql-storage
+`oc get pod -n openshift-image-registry`
 
-oc get pvc
+`oc status`
 
-oc get pv
+`oc logs <pod-name>`
+
+`oc get events`
 
 
-Cat init_data.sql
+## OpenShift Storage, Persistent Volume Claim (PVC), PV 
+
+Common Commands
+
+`oc get storageclass`
+
+Create an app with Postgres DB
+
+`oc new-app --name postgresql-persistent --image registry.redhat.io/rhel8/postgresql-13:1-7 -e POSTGRESQL_USER=redhat -e POSTGRESQL_PASSWORD=redhat123 -e POSTGRESQL_DATABASE=persistentdb`
+
+Create PV and PVC
+
+`oc set volumes deployment/postgresql-persistent --add --name postgresql-storage --type pvc --claim-class nfs-storage --claim-mode rwo --claim-size 10Gi --mount-path /var/lib/pgsql --claim-name postgresql-storage`
+
+`oc get pvc`
+
+`oc get pv`
+
+Sample SQL to be used to initialize the postgresl sql 
+
+```
+cat init_data.sql << EOF
 CREATE TABLE characters ( id SERIAL PRIMARY KEY, name varchar(50), nationality varchar(50)); 
 INSERT INTO characters (name, nationality) VALUES (‘James’, ‘USA’) , (‘Reena’, ‘Indian’), (‘Jose’, ‘Mexican’);
+EOF
+```
 
-oc exec deploy/postgresql-persistent  -I redhat123 — /usr/bin/psql -U redhat persistentdb < init_data.sql
+`oc exec deploy/postgresql-persistent  -I redhat123 — /usr/bin/psql -U redhat persistentdb < init_data.sql`
 
-oc rsh deploy/postgresql-persistent  /usr/bin/psql -U redhat persistentdb -c "select * from characters"
+`oc rsh deploy/postgresql-persistent  /usr/bin/psql -U redhat persistentdb -c 'select * from characters' `
 
-oc delete all -l app=postgresql-persistent
+`oc delete all -l app=postgresql-persistent`
 
-oc new-app --name postgresql-persistent2 --image registry.redhat.io/rhel8/postgresql-13:1-7 -e POSTGRESQL_USER=redhat -e POSTGRESQL_PASSWORD=redhat123 -e POSTGRESQL_DATABASE=persistentdb
+`oc new-app --name postgresql-persistent2 --image registry.redhat.io/rhel8/postgresql-13:1-7 -e POSTGRESQL_USER=redhat -e POSTGRESQL_PASSWORD=redhat123 -e POSTGRESQL_DATABASE=persistentdb`
 
-oc set volumes deployment/postgresql-persistent2 --add --name postgresql-storage --type pvc --claim-name postgresql-storage --mount-path /var/lib/pgsql
+`oc set volumes deployment/postgresql-persistent2 --add --name postgresql-storage --type pvc --claim-name postgresql-storage --mount-path /var/lib/pgsql`
 
-oc delete all -l app=postgresql-persistent2
+`oc delete all -l app=postgresql-persistent2`
 
-oc delete pvc/postgresql-storage
-
-
+`oc delete pvc/postgresql-storage`
 
 
-## OpenShift Authentication & Authorization, htpasswd (OpenShift Administration Part-4) RedHat Ex280
+
+
+## OpenShift Authentication & Authorization, htpasswd
 
 
 
@@ -119,7 +136,7 @@ oc extract secret/users-secret -n openshift-config --confirm
 oc set data secret/users-secret -n openshift-config --from-file=updated-secret-file
 
 
-## OpenShift Role-based Access Control - RBAC (OpenShift Administration Part-5) RedHat Ex280
+## OpenShift Role-based Access Control - RBAC
 
 Role-based Access Control – RBAC
 Authorization Roles
@@ -243,7 +260,7 @@ For example, if you have an application pod in the project-1 project that requ
 <img width="540" height="461" alt="image" src="https://github.com/user-attachments/assets/218d6ded-b50c-4224-beb0-99b84022cb77" />
 
 
-## OpenShift Security, Secrets, Configuration Maps (OpenShift Administration Part-6) RedHat Ex280
+## OpenShift Security, Secrets, Configuration Maps
 
 Secrets -
 • Passwords.
@@ -275,7 +292,7 @@ mysql -u myuser --password=redhat123 test_secrets -e 'show databases;'
 #how to set configmap as volume to /messages
 Oc set volume deploy/web —add —name configmap-vol —type configmap --configmap-name web-cm —mount-path /messages
 
-## Controlling Application Permissions with Security Context Constraints SCC (OpenShift Administration)
+## Controlling Application Permissions with Security Context Constraints SCC
 
 Security Context Constraints (SCCs)
 SCCs control:
@@ -325,7 +342,7 @@ Use the scc-subject-review subcommand to list all the security context constra
 
 
 
-## OpenShift Controlling Pod Scheduling Behavior (OpenShift Administration Part-8) RedHat Ex280
+## OpenShift Controlling Pod Scheduling Behavior
 
 oc new-project schedule-pods
 
@@ -366,7 +383,7 @@ Oc autoscale deploy/titan —min=2 —max=5 --cpu-percent=75
 
 
 
-## Quotas, Limit Ranges for containers, pods & projects (OpenShift Administration Part-9) RedHat Ex280
+## Quotas, Limit Ranges for containers, pods & projects
 
 Limit ranges can specify the following limit types:
 Default limit
@@ -422,10 +439,7 @@ spec:
 
 
 
-## Networking in OpenShift - Edge Route, Passthrough Route (OpenShift Administration) RedHat Ex280
-
-
-
+## Networking in OpenShift - Edge Route, Passthrough Route
 
 
 
