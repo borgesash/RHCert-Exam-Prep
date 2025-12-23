@@ -77,15 +77,25 @@ INSERT INTO characters (name, nationality) VALUES (‘James’, ‘USA’) , (�
 EOF
 ```
 
+Initialize DB with some sample Data
 `oc exec deploy/postgresql-persistent  -I redhat123 — /usr/bin/psql -U redhat persistentdb < init_data.sql`
 
+Verify data exists in the DB
 `oc rsh deploy/postgresql-persistent  /usr/bin/psql -U redhat persistentdb -c 'select * from characters' `
 
+Delete the Pods
 `oc delete all -l app=postgresql-persistent`
 
+Create new DB app
 `oc new-app --name postgresql-persistent2 --image registry.redhat.io/rhel8/postgresql-13:1-7 -e POSTGRESQL_USER=redhat -e POSTGRESQL_PASSWORD=redhat123 -e POSTGRESQL_DATABASE=persistentdb`
 
+Attach the old volume to the New DB App
 `oc set volumes deployment/postgresql-persistent2 --add --name postgresql-storage --type pvc --claim-name postgresql-storage --mount-path /var/lib/pgsql`
+
+Verify that OLD data exists in the New DB
+`oc rsh deploy/postgresql-persistent2  /usr/bin/psql -U redhat persistentdb -c 'select * from characters' `
+
+Clean-up 
 
 `oc delete all -l app=postgresql-persistent2`
 
