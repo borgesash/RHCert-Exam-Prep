@@ -158,6 +158,7 @@ Authorization Roles
   cluster-admin
   cluster-status 
   self-provisioner
+  cluster-reader # this is used to provide VIEW ACCESS to ALL PROJECTS in CLUSTER
  Local roles -
   admin
   basic-user
@@ -240,6 +241,10 @@ Restore project creation privileges for all users by re-creating the self-provi
 Warning: Group 'system:authenticated:oauth' not found
 clusterrole.rbac.authorization.k8s.io/self-provisioner added: "system:authenticated:oauth"
 
+Note:
+TO make the self-provisioner role change permananent, edit the 'rbac.authorization.kubernetes.io/autoupdate: "true"' to "false"
+oc edit clusterrolebindings self-provisioners 
+oc edit clusterrole self-provisioner 
 
 oc new-project test-proj
 
@@ -254,13 +259,23 @@ oc policy add-role-to-group view testers
 
 #to delete the kubeadmin
 Oc delete secrets kubeadmin -n kube-system
+oc delete user kubeadmin
+oc delete clusterrolebindings kubeadmin
 
 #to remove ability for all users to create projects
 Oc delete clusterrolebindings self-provisioners 
 
 <img width="1200" height="652" alt="Pasted Graphic 106" src="https://github.com/user-attachments/assets/16846a63-7fdd-4b84-9fd6-67d90832a31d" />
 
+#Custom roles
+oc create role viewnagas --verb=get,list,watch --resource=pods,deployments,imagestreams -n nagas
 
+After adding custom role use the '--role-namespace' to ensure its connected to correct namespace
+oc adm policy add-role-to-user viewnagas john -n nagas --role-namespace=nagas
+
+Validation
+oc describe rolebindings viewnagas
+ 
 
 ### Accessing API Resources in a Different Namespace
 To give an application access to a resource in a different namespace, you must create the role binding in the project with the resource. The subject for the binding references the application service account that is in a different namespace from the binding.
